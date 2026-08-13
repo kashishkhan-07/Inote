@@ -7,13 +7,23 @@ import authRoutes from './routes/authRoutes.js';
 
 dotenv.config();
 
-connectDB();
-
 const app = express();
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Database connection error on server',
+    });
+  }
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
