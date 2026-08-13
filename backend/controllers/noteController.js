@@ -2,11 +2,17 @@ import Note from '../models/Note.js';
 import mongoose from 'mongoose';
 
 /**
- * @desc    Get all notes (sorted by newest first)
+ * @desc    Get all notes for the LOGGED-IN user
+ *          Sorted by newest creation time first (createdAt: -1)
+ * @route   GET /api/notes
  */
 export const getNotes = async (req, res) => {
   try {
-    const notes = await Note.find().sort({ createdAt: -1 });
+    // Only fetch notes where user matches the logged-in user
+    const notes = await Note.find({ user: req.user._id }).sort({
+      createdAt: -1,
+    });
+
     res.status(200).json({
       success: true,
       count: notes.length,
@@ -22,13 +28,13 @@ export const getNotes = async (req, res) => {
 };
 
 /**
- * @desc    Get a single note by ID
+ * @desc    Get single note by ID (Belonging to logged-in user)
+ * @route   GET /api/notes/:id
  */
 export const getNoteById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Validate MongoDB ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -36,12 +42,12 @@ export const getNoteById = async (req, res) => {
       });
     }
 
-    const note = await Note.findById(id);
+    const note = await Note.findOne({ _id: id, user: req.user._id });
 
     if (!note) {
       return res.status(404).json({
         success: false,
-        message: 'Note not found',
+        message: 'Note not found or unauthorized',
       });
     }
 
@@ -59,14 +65,13 @@ export const getNoteById = async (req, res) => {
 };
 
 /**
- * @desc    Create a new note
-   POST /api/notes
+ * @desc    Create a new note linked to logged-in user
+ * @route   POST /api/notes
  */
 export const createNote = async (req, res) => {
   try {
-    const { title, content } = req.body;
+    const { title, content, color, isPinned, status } = req.body;
 
-    // Validation: Ensure title and content are present
     if (!title || !content || title.trim() === '' || content.trim() === '') {
       return res.status(400).json({
         success: false,
@@ -75,8 +80,12 @@ export const createNote = async (req, res) => {
     }
 
     const newNote = await Note.create({
+      user: req.user._id, // Attach logged-in user ID
       title: title.trim(),
       content: content.trim(),
+      color: color || 'indigo',
+      isPinned: isPinned || false,
+      status: status || 'todo',
     });
 
     res.status(201).json({
@@ -94,13 +103,12 @@ export const createNote = async (req, res) => {
 };
 
 /**
- * @desc    Update an existing note
-   PUT /api/notes/:id
+ * @desc    Update a note (Only if it belongs to logged-in user)
+ * @route   PUT /api/notes/:id
  */
 export const updateNote = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -109,26 +117,21 @@ export const updateNote = async (req, res) => {
       });
     }
 
-    if (!title || !content || title.trim() === '' || content.trim() === '') {
-      return res.status(400).json({
-        success: false,
-        message: 'Title and content cannot be empty',
-      });
-    }
-
-    // { new: true } returns the updated document rather than the old one
-    const updatedNote = await Note.findByIdAndUpdate(
-      id,
-      { title: title.trim(), content: content.trim() },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedNote) {
+    // Verify ownership
+    const note = await Note.findOne({ _id: id, user: req.user._id });
+    if (!note) {
       return res.status(404).json({
         success: false,
-        message: 'Note not found',
+        message: 'Note not found or unauthorized to edit',
       });
     }
+
+    // Update note fields
+    const updatedNote = await Note.findByIdAndUpdate(
+      id,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
 
     res.status(200).json({
       success: true,
@@ -145,8 +148,8 @@ export const updateNote = async (req, res) => {
 };
 
 /**
- * @desc    Delete a note
-  DELETE /api/notes/:id
+ * @desc    Delete a note (Only if it belongs to logged-in user)
+ * @route   DELETE /api/notes/:id
  */
 export const deleteNote = async (req, res) => {
   try {
@@ -159,19 +162,19 @@ export const deleteNote = async (req, res) => {
       });
     }
 
-    const deletedNote = await Note.findByIdAndDelete(id);
+    const note = await Note.findOneAndDelete({ _id: id, user: req.user._id });
 
-    if (!deletedNote) {
+    if (!note) {
       return res.status(404).json({
         success: false,
-        message: 'Note not found',
+        message: 'Note not found or unauthorized to delete',
       });
     }
 
     res.status(200).json({
       success: true,
       message: 'Note deleted successfully',
-      data: { id: deletedNote._id },
+      data: { id: note._id },
     });
   } catch (error) {
     res.status(500).json({

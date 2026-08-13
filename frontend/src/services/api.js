@@ -1,47 +1,68 @@
 import axios from 'axios';
 
-// Backend Base URL
-const API_BASE_URL = 'http://localhost:5000/api/notes';
-
-// Create an Axios instance with default headers
+// Base API instance
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
+// 💡 Automatic Token Interceptor: Injects "Authorization: Bearer <token>"
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('inotes-token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 /**
- * API Service Methods
+ * AUTH API CALLS
  */
+export const registerApi = async (userData) => {
+  const response = await api.post('/auth/register', userData);
+  return response.data;
+};
 
-// 1. Fetch all notes
+export const loginApi = async (credentials) => {
+  const response = await api.post('/auth/login', credentials);
+  return response.data;
+};
+
+export const getMeApi = async () => {
+  const response = await api.get('/auth/me');
+  return response.data;
+};
+
+/**
+ * NOTES & TASKS API CALLS (Automatically Protected)
+ */
 export const fetchNotes = async () => {
-  const response = await api.get('/');
-  return response.data; // returns { success: true, count: N, data: [...] }
+  const response = await api.get('/notes');
+  return response.data;
 };
 
-// 2. Fetch single note by ID
 export const fetchNoteById = async (id) => {
-  const response = await api.get(`/${id}`);
+  const response = await api.get(`/notes/${id}`);
   return response.data;
 };
 
-// 3. Create a new note
 export const createNoteApi = async (noteData) => {
-  const response = await api.post('/', noteData);
+  const response = await api.post('/notes', noteData);
   return response.data;
 };
 
-// 4. Update an existing note
 export const updateNoteApi = async (id, noteData) => {
-  const response = await api.put(`/${id}`, noteData);
+  const response = await api.put(`/notes/${id}`, noteData);
   return response.data;
 };
 
-// 5. Delete a note
 export const deleteNoteApi = async (id) => {
-  const response = await api.delete(`/${id}`);
+  const response = await api.delete(`/notes/${id}`);
   return response.data;
 };
 

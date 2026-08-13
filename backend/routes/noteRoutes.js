@@ -6,18 +6,20 @@ import {
   updateNote,
   deleteNote,
 } from '../controllers/noteController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Routes for /api/notes
-router.route('/')
-  .get(getNotes)       // GET /api/notes -> Get all notes
-  .post(createNote);   // POST /api/notes -> Create a new note
+// Apply protect middleware to ALL note routes below
+router.use(protect);
 
-// Routes for /api/notes/:id
+router.route('/')
+  .get(getNotes)
+  .post(createNote);
+
 router.route('/:id')
-  .get(getNoteById)    // GET /api/notes/:id -> Get single note
-  .put(updateNote)     // PUT /api/notes/:id -> Update note
-  .delete(deleteNote); // DELETE /api/notes/:id -> Delete note
+  .get(getNoteById)
+  .put(updateNote)
+  .delete(deleteNote);
 
 export default router;
