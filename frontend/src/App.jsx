@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
+import FilterToolbar from './components/FilterToolbar';
 import NoteCard from './components/NoteCard';
 import KanbanBoard from './components/KanbanBoard';
 import NoteModal from './components/NoteModal';
@@ -13,7 +14,17 @@ import {
   updateNoteApi,
   deleteNoteApi,
 } from './services/api';
-import { AlertCircle, CheckCircle2, X, Pin, Sparkles, Folder, Lock, ShieldCheck, Kanban, LayoutGrid } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  X,
+  Pin,
+  Sparkles,
+  Folder,
+  Lock,
+  ShieldCheck,
+  Kanban
+} from 'lucide-react';
 
 function App() {
   // Theme State
@@ -43,7 +54,12 @@ function App() {
   // View Mode: 'grid' or 'kanban'
   const [viewMode, setViewMode] = useState('grid');
 
-  // Notes Data & UI States
+  // Filter & Sorter States
+  const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'oldest' | 'title_asc' | 'title_desc'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'todo' | 'in_progress' | 'completed'
+  const [colorFilter, setColorFilter] = useState('all');
+
+  // Data & UI States
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,14 +97,13 @@ function App() {
       if (err.response?.status === 401) {
         handleLogout();
       } else {
-        showToast('Could not load notes from server', 'error');
+        showToast('Could not load tasks from server', 'error');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Auth Handlers
   const handleAuthSuccess = (userData) => {
     setUser(userData);
     showToast(`Welcome back, ${userData.name}!`);
@@ -102,7 +117,7 @@ function App() {
     showToast('Logged out successfully');
   };
 
-  // CRUD Handlers
+  // CRUD Operations
   const handleFormSubmit = async (formData) => {
     try {
       setIsSubmitting(true);
@@ -117,7 +132,7 @@ function App() {
       } else {
         const res = await createNoteApi(formData);
         if (res.success) {
-          // Prepend at the top (sorted by newest time)
+          // Prepend at the top (sorted by latest timestamp)
           setNotes((prev) => [res.data, ...prev]);
           showToast('Task created successfully!');
         }
@@ -131,7 +146,6 @@ function App() {
     }
   };
 
-  // Status Change for Kanban (Drag & Drop or Button Click)
   const handleStatusChange = async (noteId, newStatus) => {
     try {
       const res = await updateNoteApi(noteId, { status: newStatus });
@@ -168,7 +182,7 @@ function App() {
       const res = await deleteNoteApi(deleteTarget._id);
       if (res.success) {
         setNotes((prev) => prev.filter((n) => n._id !== deleteTarget._id));
-        showToast('Note deleted successfully!');
+        showToast('Task deleted successfully!');
       }
       setDeleteTarget(null);
     } catch (err) {
@@ -185,13 +199,39 @@ function App() {
     return 'Good Evening';
   };
 
-  const filteredNotes = notes.filter((n) => {
-    const q = searchTerm.toLowerCase();
-    return n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
-  });
+  // 🧠 1. Filter by Search, Status, and Color
+  const processedNotes = notes
+    .filter((n) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
+      const matchesStatus =
+        statusFilter === 'all' || (n.status || 'todo') === statusFilter;
+      const matchesColor =
+        colorFilter === 'all' || (n.color || 'indigo') === colorFilter;
 
-  const pinnedNotes = filteredNotes.filter((n) => n.isPinned);
-  const otherNotes = filteredNotes.filter((n) => !n.isPinned);
+      return matchesSearch && matchesStatus && matchesColor;
+    })
+    // 🧠 2. Chronological Sorter Engine
+    .sort((a, b) => {
+      if (sortBy === 'newest') {
+        // Newest created time first (e.g. 6:30 PM before 6:00 PM)
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+      if (sortBy === 'oldest') {
+        return new Date(a.createdAt) - new Date(b.createdAt);
+      }
+      if (sortBy === 'title_asc') {
+        return a.title.localeCompare(b.title);
+      }
+      if (sortBy === 'title_desc') {
+        return b.title.localeCompare(a.title);
+      }
+      return 0;
+    });
+
+  const pinnedNotes = processedNotes.filter((n) => n.isPinned);
+  const otherNotes = processedNotes.filter((n) => !n.isPinned);
 
   return (
     <div className="min-h-screen bg-slate-100/60 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
@@ -211,7 +251,7 @@ function App() {
         </div>
       )}
 
-      {/* Navbar with View Mode Switcher */}
+      {/* Navbar */}
       <Navbar
         onOpenCreateModal={() => { setEditingNote(null); setIsModalOpen(true); }}
         searchTerm={searchTerm}
@@ -226,10 +266,10 @@ function App() {
         setViewMode={setViewMode}
       />
 
-      {/* Main App Content */}
+      {/* Main Content */}
       {user ? (
         <>
-          {/* Hero Welcome Banner */}
+          {/* Welcome Banner with Live Indian Time */}
           <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white shadow-xl shadow-indigo-500/15 relative overflow-hidden">
               <div className="relative z-10">
@@ -251,7 +291,7 @@ function App() {
                   {getGreeting()}, {user.name.split(' ')[0]}! ✨
                 </h2>
                 <p className="text-indigo-100/80 text-sm mt-1 max-w-md">
-                  Active Mode: <span className="font-bold underline">{viewMode === 'kanban' ? 'Kanban Task Board' : 'Notes Grid'}</span>. You have {notes.length} total tasks.
+                  Showing {processedNotes.length} tasks • Sorted by {sortBy.replace('_', ' ')}
                 </p>
               </div>
 
@@ -268,28 +308,42 @@ function App() {
             </div>
           </div>
 
-          {/* Main Content Area */}
+          {/* Filter & Sort Controls Toolbar */}
+          <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8">
+            <FilterToolbar
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              colorFilter={colorFilter}
+              setColorFilter={setColorFilter}
+              totalFiltered={processedNotes.length}
+            />
+          </div>
+
+          {/* Main Display Area */}
           <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
             {isLoading ? (
               <LoadingSkeleton />
             ) : viewMode === 'kanban' ? (
-              /* 📊 KANBAN BOARD VIEW */
+              /* KANBAN BOARD */
               <KanbanBoard
-                notes={filteredNotes}
+                notes={processedNotes}
                 onEdit={(n) => { setEditingNote(n); setIsModalOpen(true); }}
                 onDelete={(n) => setDeleteTarget(n)}
                 onTogglePin={handleTogglePin}
                 onStatusChange={handleStatusChange}
                 onOpenCreateModal={() => { setEditingNote(null); setIsModalOpen(true); }}
               />
-            ) : filteredNotes.length > 0 ? (
-              /* 🗂️ STANDARD GRID VIEW */
+            ) : processedNotes.length > 0 ? (
+              /* GRID VIEW */
               <>
+                {/* Pinned Tasks */}
                 {pinnedNotes.length > 0 && (
                   <section>
                     <div className="flex items-center gap-2 mb-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       <Pin className="w-3.5 h-3.5 text-indigo-500 fill-current" />
-                      <span>Pinned Notes ({pinnedNotes.length})</span>
+                      <span>Pinned Tasks ({pinnedNotes.length})</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {pinnedNotes.map((note) => (
@@ -305,12 +359,13 @@ function App() {
                   </section>
                 )}
 
+                {/* All Tasks Sorted by Time */}
                 {otherNotes.length > 0 && (
                   <section>
                     {pinnedNotes.length > 0 && (
                       <div className="flex items-center gap-2 mb-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                         <Folder className="w-3.5 h-3.5" />
-                        <span>All Notes ({otherNotes.length})</span>
+                        <span>All Tasks ({otherNotes.length})</span>
                       </div>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -330,7 +385,7 @@ function App() {
             ) : (
               <EmptyState
                 onOpenCreate={() => { setEditingNote(null); setIsModalOpen(true); }}
-                isSearch={searchTerm.trim() !== ''}
+                isSearch={searchTerm.trim() !== '' || statusFilter !== 'all' || colorFilter !== 'all'}
                 searchTerm={searchTerm}
               />
             )}
@@ -346,40 +401,20 @@ function App() {
             Your Private, Encrypted Workspace
           </h2>
           <p className="text-slate-500 dark:text-slate-400 max-w-md mb-8 text-sm sm:text-base leading-relaxed">
-            Every user gets their own private account. Sign in or register to manage personal notes and track workflow stages with our new Kanban board.
+            Sign in or create an account to start creating, organizing, and tracking tasks chronologically with Kanban workflow.
           </p>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-95 text-white font-bold text-sm rounded-2xl shadow-xl shadow-indigo-500/25 transition-all cursor-pointer"
-            >
-              Get Started — It's Free
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-16 max-w-2xl w-full text-left">
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-              <ShieldCheck className="w-6 h-6 text-emerald-500 mb-2" />
-              <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">User Isolated</h4>
-              <p className="text-xs text-slate-400 mt-1">Only you can view and edit your tasks.</p>
-            </div>
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-              <Kanban className="w-6 h-6 text-indigo-500 mb-2" />
-              <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Kanban Board</h4>
-              <p className="text-xs text-slate-400 mt-1">To Do, In Progress, and Completed pipelines.</p>
-            </div>
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-              <Sparkles className="w-6 h-6 text-amber-500 mb-2" />
-              <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Real-time CRUD</h4>
-              <p className="text-xs text-slate-400 mt-1">Instant updates with Drag & Drop workflow.</p>
-            </div>
-          </div>
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-95 text-white font-bold text-sm rounded-2xl shadow-xl shadow-indigo-500/25 transition-all cursor-pointer"
+          >
+            Get Started — It's Free
+          </button>
         </main>
       )}
 
       {/* Footer */}
       <footer className="py-6 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500">
-        <p>iNotes • Secure Fullstack Notes & Kanban Platform</p>
+        <p>iNotes • Complete MERN Stack Task & Notes Platform with IST Chronological Sorting</p>
       </footer>
 
       {/* Modals */}

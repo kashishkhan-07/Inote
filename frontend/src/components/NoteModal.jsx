@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Palette, CheckCircle2, Clock, ListTodo } from 'lucide-react';
+import { X, Loader2, Palette, CheckCircle2, Clock, ListTodo, Calendar } from 'lucide-react';
 
 const COLORS = [
   { id: 'indigo', label: 'Indigo', bg: 'bg-indigo-500' },
@@ -11,9 +11,9 @@ const COLORS = [
 ];
 
 const STATUS_OPTIONS = [
-  { id: 'todo', label: 'To Do', icon: ListTodo, color: 'text-slate-600 dark:text-slate-300' },
-  { id: 'in_progress', label: 'In Progress', icon: Clock, color: 'text-amber-600 dark:text-amber-400' },
-  { id: 'completed', label: 'Completed', icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'todo', label: 'To Do', icon: ListTodo },
+  { id: 'in_progress', label: 'In Progress', icon: Clock },
+  { id: 'completed', label: 'Completed', icon: CheckCircle2 },
 ];
 
 const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => {
@@ -21,6 +21,7 @@ const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => 
   const [content, setContent] = useState('');
   const [color, setColor] = useState('indigo');
   const [status, setStatus] = useState('todo');
+  const [dueDate, setDueDate] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -29,11 +30,13 @@ const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => 
       setContent(initialData.content || '');
       setColor(initialData.color || 'indigo');
       setStatus(initialData.status || 'todo');
+      setDueDate(initialData.dueDate ? initialData.dueDate.substring(0, 16) : '');
     } else {
       setTitle('');
       setContent('');
       setColor('indigo');
       setStatus('todo');
+      setDueDate('');
     }
     setError('');
   }, [initialData, isOpen]);
@@ -43,7 +46,7 @@ const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Please add a title for your note');
+      setError('Please add a title for your task');
       return;
     }
     if (!content.trim()) {
@@ -57,17 +60,17 @@ const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => 
       content: content.trim(),
       color,
       status,
+      dueDate: dueDate || null,
     });
   };
 
   const isEditing = Boolean(initialData);
-  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
 
       <div
-        className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-100 dark:border-slate-800 transition-all scale-100"
+        className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-100 dark:border-slate-800 transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -77,7 +80,7 @@ const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => 
               {isEditing ? 'Edit Task' : 'Create Task / Note'}
             </h2>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              Manage details, workflow stage, and theme
+              Assigned in Indian Standard Time (IST)
             </p>
           </div>
           <button
@@ -105,7 +108,7 @@ const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => 
             </label>
             <input
               type="text"
-              placeholder="e.g. Complete Backend API Documentation"
+              placeholder="e.g. Review Quarterly Budget"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={100}
@@ -114,10 +117,10 @@ const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => 
             />
           </div>
 
-          {/* Workflow Status Selection */}
+          {/* Workflow Status */}
           <div>
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-              Kanban Status
+              Status Stage
             </label>
             <div className="grid grid-cols-3 gap-2">
               {STATUS_OPTIONS.map((opt) => {
@@ -142,48 +145,63 @@ const NoteModal = ({ isOpen, onClose, onSubmit, initialData, isSubmitting }) => 
             </div>
           </div>
 
-          {/* Color Selection */}
-          <div>
-            <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-              <Palette className="w-3.5 h-3.5" />
-              <span>Color Accent</span>
-            </label>
-            <div className="flex items-center gap-2">
-              {COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setColor(c.id)}
-                  title={c.label}
-                  className={`w-7 h-7 rounded-full ${c.bg} transition-all cursor-pointer ${
-                    color === c.id
-                      ? 'ring-3 ring-offset-2 ring-indigo-500 scale-110 shadow-md'
-                      : 'opacity-70 hover:opacity-100 hover:scale-105'
-                  }`}
-                />
-              ))}
+          {/* Color & Optional Due Date Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            {/* Color Accent */}
+            <div>
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                <Palette className="w-3.5 h-3.5" />
+                <span>Accent Color</span>
+              </label>
+              <div className="flex items-center gap-2">
+                {COLORS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setColor(c.id)}
+                    title={c.label}
+                    className={`w-7 h-7 rounded-full ${c.bg} transition-all cursor-pointer ${
+                      color === c.id
+                        ? 'ring-3 ring-offset-2 ring-indigo-500 scale-110 shadow-md'
+                        : 'opacity-70 hover:opacity-100'
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
+
+            {/* Optional Target Due Date */}
+            <div>
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Target Deadline (Optional)</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 text-xs font-semibold rounded-2xl border border-slate-200 dark:border-slate-700 focus:border-indigo-500 outline-hidden cursor-pointer"
+              />
+            </div>
+
           </div>
 
-          {/* Content */}
+          {/* Description */}
           <div>
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-              Description / Notes
+              Description
             </label>
             <textarea
-              rows={5}
-              placeholder="Add key bullet points, acceptance criteria, or ideas..."
+              rows={4}
+              placeholder="Add task notes, checklist, or links..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm rounded-2xl border border-slate-200/80 dark:border-slate-700/80 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-hidden transition-all resize-none shadow-xs"
             />
-            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-              <span>{wordCount} words</span>
-              <span>{title.length}/100 chars</span>
-            </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Footer Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
