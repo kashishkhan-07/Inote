@@ -9,41 +9,38 @@ dotenv.config();
 
 const app = express();
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 
+// Ensure MongoDB is connected
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (err) {
+    console.error('DB Middleware Error:', err.message);
     res.status(500).json({
       success: false,
-      message: 'Database connection error on server',
+      message: `Database Connection Failed: ${err.message}`,
     });
   }
 });
 
+// 💡 Support both `/api/...` and `/...` to prevent Vercel path-stripping bugs
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/notes', noteRoutes);
+app.use('/notes', noteRoutes);
 
-//  Test Route (Health Check)
-app.get('/', (req, res) => {
-  res.json({ message: 'Notes API is running smoothly 🚀' });
-});
-
-//  404 Route Handler (for undefined endpoints)
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Cannot ${req.method} ${req.originalUrl} - Route not found`,
-  });
-});
+app.get('/api', (req, res) => res.json({ message: 'API is running ' }));
+app.get('/', (req, res) => res.json({ message: 'API is running ' }));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(` Server running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;

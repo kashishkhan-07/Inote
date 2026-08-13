@@ -1,23 +1,43 @@
 import mongoose from 'mongoose';
 
-let isConnected = false;
+// Cache connection in global scope across serverless lambdas
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 const connectDB = async () => {
-  if (isConnected) {
-    return;
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const mongoUri = process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      throw new Error('MONGO_URI is missing from Environment Variables!');
+    }
+
+    const opts = {
+      serverSelectionTimeoutMS: 8000,
+    };
+
+    cached.promise = mongoose.connect(mongoUri, opts).then((mongooseInstance) => {
+      console.log('MongoDB Connected successfully');
+      return mongooseInstance;
+    });
   }
 
   try {
-    const db = await mongoose.connect(process.env.MONGO_URI, {
-      bufferCommands: false,
-    });
-    isConnected = db.connections[0].readyState === 1;
-    console.log(` MongoDB Connected: ${db.connection.host}`);
-  } catch (error) {
-    console.error(` MongoDB Connection Error: ${error.message}`);
-    // Do NOT call process.exit(1) on Vercel!
-    throw new Error('Database connection failed');
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.error('MongoDB Connection Error:', e.message);
+    throw e;
   }
+
+  return cached.conn;
 };
 
 export default connectDB;

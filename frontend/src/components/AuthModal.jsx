@@ -54,12 +54,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
         onClose();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Authentication failed. Please try again.');
+      console.error('Auth Error:', err);
+      const serverMessage = err.response?.data?.message;
+      const statusText = err.response?.status ? ` (Status: ${err.response.status})` : '';
+      setError(serverMessage ? `${serverMessage}${statusText}` : `Error: ${err.message || 'Server Unreachable'}`);
     } finally {
       setIsLoading(false);
     }
-  };
-
   const switchMode = (mode) => {
     setIsLogin(mode);
     setError('');
