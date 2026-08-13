@@ -3,12 +3,11 @@ import { X, Lock, Mail, User, Eye, EyeOff, Loader2, Sparkles } from 'lucide-reac
 import { loginApi, registerApi } from '../services/api';
 
 const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
-  const [isLogin, setIsLogin] = useState(true); // Toggle between Login and Register
+  const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,7 +46,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
       }
 
       if (res.success && res.data.token) {
-        // Save token and user info to localStorage
         localStorage.setItem('inotes-token', res.data.token);
         localStorage.setItem('inotes-user', JSON.stringify(res.data));
         onAuthSuccess(res.data);
@@ -57,10 +55,16 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
       console.error('Auth Error:', err);
       const serverMessage = err.response?.data?.message;
       const statusText = err.response?.status ? ` (Status: ${err.response.status})` : '';
-      setError(serverMessage ? `${serverMessage}${statusText}` : `Error: ${err.message || 'Server Unreachable'}`);
+      setError(
+        serverMessage
+          ? `${serverMessage}${statusText}`
+          : `Error: ${err.message || 'Server Unreachable'}`
+      );
     } finally {
       setIsLoading(false);
     }
+  };
+
   const switchMode = (mode) => {
     setIsLogin(mode);
     setError('');
@@ -68,15 +72,12 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-
       <div
         className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 dark:border-slate-800 transition-all scale-100 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Decorative Gradient */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
@@ -84,7 +85,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Modal Header */}
         <div className="text-center mb-6">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-500/25">
             <Sparkles className="w-6 h-6" />
@@ -93,11 +93,10 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             {isLogin ? 'Welcome Back' : 'Create Your Account'}
           </h2>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            {isLogin ? 'Sign in to access your personal notes & tasks' : 'Start organizing your thoughts in one secure place'}
+            {isLogin ? 'Sign in to access your personal workspace' : 'Start organizing your thoughts in one secure place'}
           </p>
         </div>
 
-        {/* Tab Switcher */}
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl mb-5">
           <button
             type="button"
@@ -123,17 +122,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
           </button>
         </div>
 
-        {/* Error Alert */}
         {error && (
           <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/50 rounded-2xl text-rose-600 dark:text-rose-400 text-xs font-medium">
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
-
-          {/* Name Field (Sign Up Only) */}
           {!isLogin && (
             <div>
               <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
@@ -152,7 +147,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             </div>
           )}
 
-          {/* Email */}
           <div>
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
               Email Address
@@ -169,7 +163,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             </div>
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
               Password
@@ -193,7 +186,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             </div>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -203,9 +195,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
           </button>
         </form>
-
       </div>
-
     </div>
   );
 };
