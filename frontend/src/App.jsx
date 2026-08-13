@@ -1,4 +1,4 @@
- import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import NoteCard from './components/NoteCard';
 import NoteModal from './components/NoteModal';
@@ -14,23 +14,38 @@ import {
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 
 function App() {
-  // --- 1. State Management ---
+  // --- 1. Theme State (Persistent in localStorage) ---
+    // Default to false (Light Mode) or saved preference
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('inotes-theme');
+    return saved === 'dark';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) {
+      root.classList.add('dark');
+      localStorage.setItem('inotes-theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('inotes-theme', 'light');
+    }
+  }, [darkMode]);
+
+  // --- 2. Data & UI States ---
   const [notes, setNotes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Modals & Action States
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState(null); // null = Create Mode, object = Edit Mode
+  const [editingNote, setEditingNote] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [deleteTarget, setDeleteTarget] = useState(null); // null = Closed, object = Open
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Toast Notification State
-  const [toast, setToast] = useState(null); // { message, type: 'success' | 'error' }
+  const [toast, setToast] = useState(null);
 
-  // Helper to trigger toast notifications
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => {
@@ -38,7 +53,7 @@ function App() {
     }, 3000);
   };
 
-  // --- 2. READ (Fetch Notes on Mount) ---
+  // --- 3. Fetch Notes on Mount ---
   useEffect(() => {
     loadNotes();
   }, []);
@@ -58,16 +73,14 @@ function App() {
     }
   };
 
-  // --- 3. CREATE & UPDATE Handler ---
+  // --- 4. CREATE & UPDATE ---
   const handleFormSubmit = async (formData) => {
     try {
       setIsSubmitting(true);
 
       if (editingNote) {
-        // UPDATE Existing Note (PUT)
         const res = await updateNoteApi(editingNote._id, formData);
         if (res.success) {
-          // Replace the old note with the updated note in state
           setNotes((prevNotes) =>
             prevNotes.map((note) =>
               note._id === editingNote._id ? res.data : note
@@ -76,16 +89,13 @@ function App() {
           showToast('Note updated successfully!');
         }
       } else {
-        // CREATE New Note (POST)
         const res = await createNoteApi(formData);
         if (res.success) {
-          // Prepend the new note to the top of the notes array
           setNotes((prevNotes) => [res.data, ...prevNotes]);
           showToast('Note created successfully!');
         }
       }
 
-      // Close modal and reset
       setIsModalOpen(false);
       setEditingNote(null);
     } catch (err) {
@@ -96,7 +106,7 @@ function App() {
     }
   };
 
-  // --- 4. DELETE Handler ---
+  // --- 5. DELETE ---
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
 
@@ -104,7 +114,6 @@ function App() {
       setIsDeleting(true);
       const res = await deleteNoteApi(deleteTarget._id);
       if (res.success) {
-        // Remove the note from local state
         setNotes((prevNotes) =>
           prevNotes.filter((note) => note._id !== deleteTarget._id)
         );
@@ -119,7 +128,6 @@ function App() {
     }
   };
 
-  // --- 5. Modal Open Helpers ---
   const openCreateModal = () => {
     setEditingNote(null);
     setIsModalOpen(true);
@@ -130,7 +138,6 @@ function App() {
     setIsModalOpen(true);
   };
 
-  // --- 6. Live Filtered Notes for Search ---
   const filteredNotes = notes.filter((note) => {
     const query = searchTerm.toLowerCase();
     return (
@@ -140,42 +147,41 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
 
-      {/* Toast Notification Banner */}
+      {/* Toast Notification */}
       {toast && (
-        <div className="fixed top-20 right-5 z-50 flex items-center gap-3 px-4 py-3 bg-white rounded-2xl shadow-xl border border-slate-100 animate-in slide-in-from-top-4 duration-200">
+        <div className="fixed top-20 right-5 z-50 flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 animate-in slide-in-from-top-4 duration-200">
           {toast.type === 'success' ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
           ) : (
             <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
           )}
-          <span className="text-sm font-medium text-slate-800">{toast.message}</span>
+          <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{toast.message}</span>
           <button
             onClick={() => setToast(null)}
-            className="text-slate-400 hover:text-slate-600 p-1"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Sticky Header Navbar */}
+      {/* Navbar with Dark Mode Toggle */}
       <Navbar
         onOpenCreateModal={openCreateModal}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         totalNotes={notes.length}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Loading State */}
         {isLoading ? (
           <LoadingSkeleton />
         ) : filteredNotes.length > 0 ? (
-          /* Notes Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredNotes.map((note) => (
               <NoteCard
@@ -187,7 +193,6 @@ function App() {
             ))}
           </div>
         ) : (
-          /* Empty / No Search Results State */
           <EmptyState
             onOpenCreate={openCreateModal}
             isSearch={searchTerm.trim() !== ''}
@@ -197,11 +202,11 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 border-t border-slate-200/60 text-center text-xs text-slate-400">
-        <p>MERN Stack Notes App • Clean Architecture</p>
+      <footer className="py-6 border-t border-slate-200/60 dark:border-slate-800/80 text-center text-xs text-slate-400 dark:text-slate-500">
+        <p>iNotes • MERN Stack CRUD with Dark Mode</p>
       </footer>
 
-      {/* Create & Edit Modal */}
+      {/* Modals */}
       <NoteModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -210,7 +215,6 @@ function App() {
         isSubmitting={isSubmitting}
       />
 
-      {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
