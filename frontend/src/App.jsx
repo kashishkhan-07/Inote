@@ -55,8 +55,8 @@ function App() {
   const [viewMode, setViewMode] = useState('grid');
 
   // Filter & Sorter States
-  const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'oldest' | 'title_asc' | 'title_desc'
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'todo' | 'in_progress' | 'completed'
+  const [sortBy, setSortBy] = useState('newest');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [colorFilter, setColorFilter] = useState('all');
 
   // Data & UI States
@@ -117,7 +117,7 @@ function App() {
     showToast('Logged out successfully');
   };
 
-  // CRUD Operations
+  // CRUD Handlers
   const handleFormSubmit = async (formData) => {
     try {
       setIsSubmitting(true);
@@ -132,7 +132,6 @@ function App() {
       } else {
         const res = await createNoteApi(formData);
         if (res.success) {
-          // Prepend at the top (sorted by latest timestamp)
           setNotes((prev) => [res.data, ...prev]);
           showToast('Task created successfully!');
         }
@@ -199,23 +198,21 @@ function App() {
     return 'Good Evening';
   };
 
-  // 🧠 1. Filter by Search, Status, and Color
+  // Filter & Chronological Sort Engine
   const processedNotes = notes
     .filter((n) => {
       const q = searchTerm.toLowerCase();
       const matchesSearch =
         n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
       const matchesStatus =
-        statusFilter === 'all' || (n.status || 'todo') === statusFilter;
+        viewMode === 'kanban' || statusFilter === 'all' || (n.status || 'todo') === statusFilter;
       const matchesColor =
         colorFilter === 'all' || (n.color || 'indigo') === colorFilter;
 
       return matchesSearch && matchesStatus && matchesColor;
     })
-    // 🧠 2. Chronological Sorter Engine
     .sort((a, b) => {
       if (sortBy === 'newest') {
-        // Newest created time first (e.g. 6:30 PM before 6:00 PM)
         return new Date(b.createdAt) - new Date(a.createdAt);
       }
       if (sortBy === 'oldest') {
@@ -266,31 +263,30 @@ function App() {
         setViewMode={setViewMode}
       />
 
-      {/* Main Content */}
+      {/* Main App Content */}
       {user ? (
         <>
-          {/* Welcome Banner with Live Indian Time */}
-          <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white shadow-xl shadow-indigo-500/15 relative overflow-hidden">
+          {/* Hero Welcome Banner with Strict DD/MM/YYYY Format */}
+          <div className="max-w-6xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 pt-6 pb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-7 rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white shadow-xl shadow-indigo-500/15 relative overflow-hidden">
               <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold mb-3 border border-white/10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold mb-2.5 border border-white/10">
                   <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                   <span>
-                    {new Intl.DateTimeFormat('en-IN', {
-                      timeZone: 'Asia/Kolkata',
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: true,
-                    }).format(new Date())} (IST)
+                    {(() => {
+                      const now = new Date();
+                      const d = String(now.getDate()).padStart(2, '0');
+                      const m = String(now.getMonth() + 1).padStart(2, '0');
+                      const y = now.getFullYear();
+                      const time = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                      return `${d}/${m}/${y} • ${time} (IST)`;
+                    })()}
                   </span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
                   {getGreeting()}, {user.name.split(' ')[0]}! ✨
                 </h2>
-                <p className="text-indigo-100/80 text-sm mt-1 max-w-md">
+                <p className="text-indigo-100/80 text-xs sm:text-sm mt-0.5 max-w-md">
                   Showing {processedNotes.length} tasks • Sorted by {sortBy.replace('_', ' ')}
                 </p>
               </div>
@@ -298,7 +294,7 @@ function App() {
               <div className="relative z-10 flex items-center gap-3">
                 <button
                   onClick={() => { setEditingNote(null); setIsModalOpen(true); }}
-                  className="px-5 py-3 rounded-2xl bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-sm shadow-lg shadow-black/10 transition-all active:scale-95 cursor-pointer"
+                  className="px-5 py-2.5 rounded-2xl bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-sm shadow-lg shadow-black/10 transition-all active:scale-95 cursor-pointer"
                 >
                   + New Task
                 </button>
@@ -309,7 +305,7 @@ function App() {
           </div>
 
           {/* Filter & Sort Controls Toolbar */}
-          <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 pt-2">
             <FilterToolbar
               sortBy={sortBy}
               setSortBy={setSortBy}
@@ -317,12 +313,12 @@ function App() {
               setStatusFilter={setStatusFilter}
               colorFilter={colorFilter}
               setColorFilter={setColorFilter}
-              totalFiltered={processedNotes.length}
+              isKanbanView={viewMode === 'kanban'}
             />
           </div>
 
           {/* Main Display Area */}
-          <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+          <main className="flex-1 max-w-6xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-5 space-y-7">
             {isLoading ? (
               <LoadingSkeleton />
             ) : viewMode === 'kanban' ? (
@@ -341,11 +337,11 @@ function App() {
                 {/* Pinned Tasks */}
                 {pinnedNotes.length > 0 && (
                   <section>
-                    <div className="flex items-center gap-2 mb-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 mb-3.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       <Pin className="w-3.5 h-3.5 text-indigo-500 fill-current" />
                       <span>Pinned Tasks ({pinnedNotes.length})</span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                       {pinnedNotes.map((note) => (
                         <NoteCard
                           key={note._id}
@@ -359,16 +355,16 @@ function App() {
                   </section>
                 )}
 
-                {/* All Tasks Sorted by Time */}
+                {/* All Tasks */}
                 {otherNotes.length > 0 && (
                   <section>
                     {pinnedNotes.length > 0 && (
-                      <div className="flex items-center gap-2 mb-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      <div className="flex items-center gap-2 mb-3.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                         <Folder className="w-3.5 h-3.5" />
                         <span>All Tasks ({otherNotes.length})</span>
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                       {otherNotes.map((note) => (
                         <NoteCard
                           key={note._id}
@@ -414,7 +410,7 @@ function App() {
 
       {/* Footer */}
       <footer className="py-6 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500">
-        <p>iNotes • Complete MERN Stack Task & Notes Platform with IST Chronological Sorting</p>
+        <p>iNotes • Secure Fullstack Notes & Tasks Platform with IST Sorting</p>
       </footer>
 
       {/* Modals */}
@@ -444,4 +440,5 @@ function App() {
   );
 }
 
+// 💡 Essential Default Export
 export default App;
