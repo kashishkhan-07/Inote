@@ -5,6 +5,7 @@ import NoteCard from './components/NoteCard';
 import KanbanBoard from './components/KanbanBoard';
 import NoteModal from './components/NoteModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
+import LogoutConfirmModal from './components/LogoutConfirmModal';
 import AuthModal from './components/AuthModal';
 import EmptyState from './components/EmptyState';
 import LoadingSkeleton from './components/LoadingSkeleton';
@@ -50,6 +51,7 @@ function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   // View Mode: 'grid' or 'kanban'
   const [viewMode, setViewMode] = useState('grid');
@@ -248,7 +250,7 @@ function App() {
         </div>
       )}
 
-      {/* Navbar */}
+      {/* Navbar with Logout Confirmation trigger */}
       <Navbar
         onOpenCreateModal={() => { setEditingNote(null); setIsModalOpen(true); }}
         searchTerm={searchTerm}
@@ -258,7 +260,7 @@ function App() {
         setDarkMode={setDarkMode}
         user={user}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onLogout={handleLogout}
+        onLogout={() => setIsLogoutModalOpen(true)}
         viewMode={viewMode}
         setViewMode={setViewMode}
       />
@@ -266,7 +268,7 @@ function App() {
       {/* Main App Content */}
       {user ? (
         <>
-          {/* Hero Welcome Banner with Strict DD/MM/YYYY Format */}
+          {/* Hero Welcome Banner */}
           <div className="max-w-6xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 pt-6 pb-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-7 rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white shadow-xl shadow-indigo-500/15 relative overflow-hidden">
               <div className="relative z-10">
@@ -436,9 +438,18 @@ function App() {
         isDeleting={isDeleting}
       />
 
+      {/* 🛡️ Logout Confirmation Dialog */}
+      <LogoutConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={() => {
+          handleLogout();
+          setIsLogoutModalOpen(false);
+        }}
+      />
+
     </div>
   );
 }
 
-// 💡 Essential Default Export
 export default App;

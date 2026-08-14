@@ -142,8 +142,13 @@ const Navbar = ({
                     {getInitials(user.name)}
                   </div>
 
-                  <button
-                    onClick={onLogout}
+                                    <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onLogout();
+                    }}
                     title="Logout"
                     className="p-1.5 sm:p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
                   >
